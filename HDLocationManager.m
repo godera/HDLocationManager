@@ -118,6 +118,7 @@
     // output 1
     [self singleton].locationStatus = HDLocationStatus_Locating;
     [[NSNotificationCenter defaultCenter] postNotificationName:NOTE_LOCATE_STATUS_CHANGED object:nil];
+    StepLog(@"定位中");
     
     [self singleton].isLocationValid = YES;
     [[self singleton].locationManager startUpdatingLocation];
@@ -146,8 +147,7 @@
     // output 2
     self.locationStatus = HDLocationStatus_LocateFailed;
     [[NSNotificationCenter defaultCenter] postNotificationName:NOTE_LOCATE_STATUS_CHANGED object:nil];
-    
-    ErrorLog(@"locate error = %@",error);
+    ErrorLog(@"定位失败 error = %@",error);
 }
 
 -(void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray *)locations
@@ -163,7 +163,9 @@
     self.placemark.location = location;
     self.locationStatus = HDLocationStatus_LocateSuccessAndReversing;
     [[NSNotificationCenter defaultCenter] postNotificationName:NOTE_LOCATE_STATUS_CHANGED object:nil];
+    StepLog(@"定位到坐标：%@",location);
 
+#warning TODO:
 //    [NetLayer reportUserLocation:location complete:nil];
     
     [[CLGeocoder new] reverseGeocodeLocation:location completionHandler:^(NSArray<CLPlacemark *> * _Nullable placemarks, NSError * _Nullable error) {
@@ -171,8 +173,7 @@
             // output 4
             self.locationStatus = HDLocationStatus_LocateSuccessButReverseFailed;
             [[NSNotificationCenter defaultCenter] postNotificationName:NOTE_LOCATE_STATUS_CHANGED object:nil];
-            
-            ErrorLog(@"ReverseGeocodeLocation error = %@",error);
+            ErrorLog(@"获取地标失败 error = %@",error);
             return;
         }
         // output 5
@@ -189,13 +190,14 @@
         }
         
         if (aPlacemark.subLocality.length > 0) {
-            self.placemark.locality = aPlacemark.subLocality;
+            self.placemark.subLocality = aPlacemark.subLocality;
         }else{
-            self.placemark.locality = aPlacemark.subAdministrativeArea;
+            self.placemark.subLocality = aPlacemark.subAdministrativeArea;
         }
         
         self.locationStatus = HDLocationStatus_LocateSuccessAndReverseSuccess;
         [[NSNotificationCenter defaultCenter] postNotificationName:NOTE_LOCATE_STATUS_CHANGED object:nil];
+        StepLog(@"取回地标：%@", self.placemark.descriptionFixed);
     }];
 
 
