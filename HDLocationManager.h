@@ -60,14 +60,11 @@ typedef NS_ENUM(NSInteger, HDLocationStatus) {
     HDLocationStatus_LocateSuccessAndReverseSuccess,
 };
 
+/// a singleton
 @interface HDLocationManager : NSObject
 
-+ (HDLocationManager *)singleton;
-
-// 定位分两种，一种是用户要求的定位，一种是APP私自的定位
+// 定位分两种，一种是用户要求的定位，一种是APP私自的定位；定位动作返回结果之后自动关闭定位
 + (void)startUpdatingLocationByTheUser:(BOOL)byTheUser;
-
-+ (void)stopUpdatingLocation;
 
 + (HDLocationStatus)locationStatus;
 

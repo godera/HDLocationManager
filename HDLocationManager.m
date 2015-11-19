@@ -14,6 +14,9 @@
 // output
 @property (assign, nonatomic) HDLocationStatus locationStatus;
 @property (strong, nonatomic) HDPlacemark *placemark;
+
++ (HDLocationManager *)singleton;
++ (void)stopUpdatingLocation;
 @end
 
 
@@ -56,10 +59,10 @@
 
 + (void)showOpenLocationMessage {
     UIColor *color = [UIColor whiteColor];
-    if ([HDCoreData currentUser].userInfo.userMood.color) {
-        color = [UIColor getColor:[HDCoreData currentUser].userInfo.userMood.color];
+    if ([JKCoreData currentUser].userInfo.userMood.color) {
+        color = [UIColor getColor:[JKCoreData currentUser].userInfo.userMood.color];
     }
-    [JKAlertView showSQAlertWithTitle:nil message:@"请在‘设置－隐私－定位服务’选项中，允许奢圈访问你的手机定位服务" cancelButtonTitle:@"好" okButtonTitle:nil TiniColor:[CoreDataUpdateMethod sharedMethod].currentMoodColor];
+    [JKAlertView showSQAlertWithTitle:nil message:@"请在‘设置－隐私－定位服务’选项中，允许APP访问你的手机定位服务" cancelButtonTitle:@"好" okButtonTitle:nil TiniColor:[CoreDataUpdateMethod sharedMethod].currentMoodColor];
 }
 
 // 定位分两种，一种是用户要求的定位，一种是APP私自的定位
@@ -70,11 +73,12 @@
         // Ask the user for permission to use location.
         case kCLAuthorizationStatusNotDetermined:
         {
-            if ([[self singleton].locationManager respondsToSelector:@selector(requestWhenInUseAuthorization)]) {
-                [[self singleton].locationManager requestWhenInUseAuthorization]; // 重复的请求 系统会自动忽略
-                return;
+            if (byTheUser) {
+                if ([[self singleton].locationManager respondsToSelector:@selector(requestWhenInUseAuthorization)]) {
+                    [[self singleton].locationManager requestWhenInUseAuthorization]; // 重复的请求 系统会自动忽略
+                }
             }
-            break;
+            return;
         }
         // This app is not authorized to use location services. The user cannot change this app’s status,
         // possibly due to active restrictions such as parental controls being in place.
@@ -125,12 +129,11 @@
 }
 
 + (void)stopUpdatingLocation{
-    [self singleton].isLocationValid = NO;
     [[self singleton].locationManager stopUpdatingLocation];
 }
 
 #pragma mark - CLLocationManagerDelegate
-// 当用户授权之后，APP 会再次 DidBecomeActive，如果在 DidBecomeActive 里调用了 +startUpdatingLocationByTheUser: 方法，
+// 当用户授权之后，APP 会再次 DidBecomeActive，如果在 DidBecomeActive 里调用了 [HDLocationManager startUpdatingLocationByTheUser:NO]，
 // 此时 didChangeAuthorizationStatus 方法就不需要了
 //-(void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status {
 //    if (status == kCLAuthorizationStatusAuthorizedWhenInUse || status == kCLAuthorizationStatusAuthorizedAlways) {
@@ -138,10 +141,13 @@
 //    }
 //}
 
--(void)locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error{
+-(void)locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error
+{
     if (_isLocationValid == NO) {
         return;
     }
+    _isLocationValid = NO; // 定位一次会收到数次定位信息，只取第一次的数据，随后的丢掉
+
     [HDLocationManager stopUpdatingLocation];
     
     // output 2
@@ -155,6 +161,8 @@
     if (_isLocationValid == NO) {
         return;
     }
+    _isLocationValid = NO; // 定位一次会收到数次定位信息，只取第一次的数据，随后的丢掉
+    
     [HDLocationManager stopUpdatingLocation];
     
     CLLocation* location = [locations firstObject];
@@ -165,7 +173,7 @@
     [[NSNotificationCenter defaultCenter] postNotificationName:NOTE_LOCATE_STATUS_CHANGED object:nil];
     StepLog(@"定位到坐标：%@",location);
 
-#warning TODO:
+ // MARK:TODO For First Time
 //    [NetLayer reportUserLocation:location complete:nil];
     
     [[CLGeocoder new] reverseGeocodeLocation:location completionHandler:^(NSArray<CLPlacemark *> * _Nullable placemarks, NSError * _Nullable error) {
@@ -200,10 +208,6 @@
         StepLog(@"取回地标：%@", self.placemark.descriptionFixed);
     }];
 
-
 }
-
-
-#pragma mark -
 
 @end
